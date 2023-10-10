@@ -12,7 +12,9 @@ import { CfnOutput, Duration } from "aws-cdk-lib";
 export class EcsServicediscoveryStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    const testvpc = new ec2.Vpc(this, "TestVPC", {
+
+    // ECSクラスター用のVPC
+    const vpc = new ec2.Vpc(this, "ECSVPC", {
       cidr: "10.0.0.0/16",
       maxAzs: 2,
       subnetConfiguration: [
@@ -29,7 +31,8 @@ export class EcsServicediscoveryStack extends cdk.Stack {
       ],
     });
 
-    const vpc = new ec2.Vpc(this, "ECSVPC", {
+    // ECSクラスターのService Discoveryで作成したHostedZoneを紐づけテスト用のVPC
+    const testvpc = new ec2.Vpc(this, "TestVPC", {
       cidr: "10.0.0.0/16",
       maxAzs: 2,
       subnetConfiguration: [
@@ -70,7 +73,7 @@ export class EcsServicediscoveryStack extends cdk.Stack {
       }
     );
 
-    // for ECS Exec Role
+    // ECS Exec Role
     const taskRole = new iam.Role(this, "TaskRole", {
       assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
     });
@@ -117,6 +120,9 @@ export class EcsServicediscoveryStack extends cdk.Stack {
       },
     });
 
+    // 作成したdnsnamespaceからHostedZoneIdを取得してaddVpcメソッドを実行
+    // ただし、こちらのIssueにある通り実行ができない
+    // https://github.com/aws/aws-cdk/issues/10413
     const privateHostedZone = route53.PrivateHostedZone.fromHostedZoneId(
       this, "HostZone", dnsnamespace.namespaceHostedZoneId
     ) as route53.PrivateHostedZone
